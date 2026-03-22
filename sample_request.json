@@ -1,0 +1,30 @@
+{
+  "items": [
+    {
+      "headline": "EU prepares new sanctions package on Russian oil exports",
+      "body": "European Union officials are discussing a new round of sanctions targeting Russian oil shipments and related financial services.",
+      "source": "Reuters",
+      "published_at": "2026-03-22T10:00:00Z",
+      "region": "EU",
+      "topic_hint": "energy"
+    },
+    {
+      "headline": "Major bank faces investigation over alleged money-laundering violations",
+      "body": "Regulators in the US and EU have launched a joint probe into a global bank over suspected breaches of anti-money laundering rules.",
+      "source": "FT",
+      "published_at": "2026-03-22T08:30:00Z",
+      "region": "US",
+      "topic_hint": "banking"
+    },
+    {
+      "headline": "Ceasefire agreement reached in long-running border conflict",
+      "body": "Both sides agreed to halt military operations and open talks on a permanent peace settlement.",
+      "source": "Bloomberg",
+      "published_at": "2026-03-21T18:00:00Z",
+      "region": "MENA",
+      "topic_hint": "geopolitics"
+    }
+  ],
+  "focus": "geopolitics",
+  "horizon_days": 7
+}
