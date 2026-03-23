@@ -1,7 +1,10 @@
 from __future__ import annotations
 
-from typing import List, Literal, Optional
+from typing import List, Optional
 from pydantic import BaseModel, Field, validator
+
+from typing import Literal
+from pydantic import BaseModel
 
 
 RiskLevel = Literal["low", "medium", "high"]
@@ -65,3 +68,39 @@ class RiskSignalResponse(BaseModel):
     summary: str
     methodology_note: str
     items: List[NewsItemOutput]
+
+# === Trend API models (NEW) ===
+
+class RiskSignalTrendPeriod(BaseModel):
+    period_label: str
+    items: list[NewsItemInput]
+
+
+class TrendDelta(BaseModel):
+    score_change: int
+    direction: Literal["up", "down", "flat"]
+    comment: str
+
+
+class TrendPeriodSummary(BaseModel):
+    period_label: str
+    overall_risk_score: int
+    risk_level: str
+
+
+class RiskSignalTrendResponse(BaseModel):
+    baseline: TrendPeriodSummary
+    current: TrendPeriodSummary
+    delta: TrendDelta
+    driver_tags: list[str]
+    methodology_note: str = (
+        "Trend is computed by running the existing heuristic on both periods "
+        "and comparing scores."
+    )
+
+
+class RiskSignalTrendRequest(BaseModel):
+    baseline: RiskSignalTrendPeriod
+    current: RiskSignalTrendPeriod
+    focus: str | None = None
+    horizon_days: int = 7

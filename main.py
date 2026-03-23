@@ -9,8 +9,16 @@ from fastapi.responses import JSONResponse
 from starlette.status import HTTP_400_BAD_REQUEST
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from models import RiskSignalRequest, RiskSignalResponse
-from logic import compute_risk_signal
+from models import (
+    RiskSignalRequest,
+    RiskSignalResponse,
+    RiskSignalTrendRequest,   # NEW
+    RiskSignalTrendResponse,  # NEW
+)
+from logic import (
+    compute_risk_signal,
+    compute_trend,            # NEW
+)
 
 # ---------- Logging configuration ----------
 
@@ -122,6 +130,48 @@ def risk_signal_endpoint(payload: RiskSignalRequest) -> RiskSignalResponse:
         "Computed risk signal: overall_risk_score=%d, risk_level=%s",
         response.overall_risk_score,
         response.risk_level,
+    )
+
+    return response
+
+
+# === NEW: trend endpoint ===
+
+@app.post(
+    "/risk-signal/trend",
+    response_model=RiskSignalTrendResponse,
+    summary="Risk signal trend between two periods",
+)
+def risk_signal_trend_endpoint(
+    payload: RiskSignalTrendRequest,
+) -> RiskSignalTrendResponse:
+    if not payload.baseline.items:
+        raise HTTPException(
+            status_code=HTTP_400_BAD_REQUEST,
+            detail="Baseline items cannot be empty.",
+        )
+    if not payload.current.items:
+        raise HTTPException(
+            status_code=HTTP_400_BAD_REQUEST,
+            detail="Current items cannot be empty.",
+        )
+
+    logger.info(
+        "Received /risk-signal/trend request with %d baseline items and %d current items (focus=%s, horizon_days=%d)",
+        len(payload.baseline.items),
+        len(payload.current.items),
+        payload.focus,
+        payload.horizon_days,
+    )
+
+    response = compute_trend(payload)
+
+    logger.info(
+        "Computed trend: baseline_score=%d, current_score=%d, direction=%s, delta=%d",
+        response.baseline.overall_risk_score,
+        response.current.overall_risk_score,
+        response.delta.direction,
+        response.delta.score_change,
     )
 
     return response

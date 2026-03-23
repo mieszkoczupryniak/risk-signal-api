@@ -11,7 +11,18 @@ from config import (
     CATEGORY_WEIGHTS,
     MAX_PER_ITEM_RISK,
     MAX_EFFECTIVE_ITEMS,
+    GRANULAR_RISK_TAG_RULES,  # NEW
 )
+from models import (
+    NewsItemInput,
+    NewsItemOutput,
+    RiskSignalResponse,
+    RiskSignalTrendRequest,   # NEW
+    RiskSignalTrendResponse,  # NEW
+    TrendPeriodSummary,       # NEW
+    TrendDelta,               # NEW
+)
+
 from models import NewsItemInput, NewsItemOutput, RiskSignalResponse
 
 
@@ -51,6 +62,30 @@ def detect_categories(item: NewsItemInput) -> List[str]:
         categories.append("other")
 
     return sorted(list(set(categories)))
+
+# === Granular risk tags helper (NEW) ===
+
+def derive_granular_tags_for_item(
+    categories: List[str],
+    region: Optional[str],
+) -> List[str]:
+    tags: set[str] = set()
+    region_upper = (region or "").upper() or None
+
+    for rule in GRANULAR_RISK_TAG_RULES:
+        if rule["category"] not in categories:
+            continue
+        rule_region = rule["region"]
+        # rule_region None => global tag for this category
+        if rule_region is None or rule_region == region_upper:
+            tags.add(rule["tag"])
+
+    # fallback: jeśli nie złapaliśmy nic specyficznego, zrób ogólny tag
+    if not tags:
+        for cat in categories:
+            tags.add(f"{cat}_risk")
+
+    return list(tags)
 
 
 def compute_item_risk(item: NewsItemInput) -> NewsItemOutput:
@@ -95,7 +130,7 @@ def compute_item_risk(item: NewsItemInput) -> NewsItemOutput:
 
 def aggregate_risk(
     item_outputs: List[NewsItemOutput],
-) -> Tuple[int, str, List[str]]:
+) -> Tuple[int, str]:
     total_raw = sum(o.risk_contribution for o in item_outputs if o.affects_score)
 
     max_theoretical = MAX_PER_ITEM_RISK * MAX_EFFECTIVE_ITEMS
@@ -112,18 +147,7 @@ def aggregate_risk(
     else:
         level = "high"
 
-    tag_counter: Counter[str] = Counter()
-    for o in item_outputs:
-        if o.affects_score:
-            for c in o.categories:
-                tag_counter[c] += 1
-
-    top_tags = [tag for tag, _count in tag_counter.most_common(5)]
-    if not top_tags:
-        top_tags = ["other"]
-
-    risk_tags = [f"{tag}_risk" for tag in top_tags]
-    return overall, level, risk_tags
+    return overall, level
 
 
 def build_summary_and_methodology(
@@ -170,7 +194,21 @@ def compute_risk_signal(
         compute_item_risk(item) for item in items
     ]
 
-    overall_risk_score, risk_level, top_risk_tags = aggregate_risk(item_outputs)
+    # NEW: granular risk tags z kategorii + regionu
+    granular_tags_counter: Counter[str] = Counter()
+    for item, output in zip(items, item_outputs):
+        if output.affects_score:
+            item_tags = derive_granular_tags_for_item(
+                categories=output.categories,
+                region=item.region,
+            )
+            granular_tags_counter.update(item_tags)
+
+    top_risk_tags = [tag for tag, _ in granular_tags_counter.most_common(5)]
+    if not top_risk_tags:
+        top_risk_tags = ["other_risk"]
+
+    overall_risk_score, risk_level = aggregate_risk(item_outputs)
 
     meta = build_summary_and_methodology(
         overall_risk_score=overall_risk_score,
@@ -187,3 +225,92 @@ def compute_risk_signal(
         methodology_note=meta["methodology_note"],
         items=item_outputs,
     )
+
+# === Trend computation (NEW) ===
+
+def compute_trend(
+    trend_request: RiskSignalTrendRequest,
+) -> RiskSignalTrendResponse:
+    baseline_req_items = trend_request.baseline.items
+    current_req_items = trend_request.current.items
+
+    baseline_result = compute_risk_signal(
+        items=baseline_req_items,
+        focus=trend_request.focus,
+        horizon_days=trend_request.horizon_days,
+    )
+    current_result = compute_risk_signal(
+        items=current_req_items,
+        focus=trend_request.focus,
+        horizon_days=trend_request.horizon_days,
+    )
+
+    score_change = (
+        current_result.overall_risk_score - baseline_result.overall_risk_score
+    )
+    if score_change > 3:
+        direction = "up"
+    elif score_change < -3:
+        direction = "down"
+    else:
+        direction = "flat"
+
+    baseline_summary = TrendPeriodSummary(
+        period_label=trend_request.baseline.period_label,
+        overall_risk_score=baseline_result.overall_risk_score,
+        risk_level=baseline_result.risk_level,
+    )
+    current_summary = TrendPeriodSummary(
+        period_label=trend_request.current.period_label,
+        overall_risk_score=current_result.overall_risk_score,
+        risk_level=current_result.risk_level,
+    )
+
+    baseline_tags = Counter(baseline_result.top_risk_tags)
+    current_tags = Counter(current_result.top_risk_tags)
+
+    driver_scores: Counter[str] = Counter()
+    for tag, count in current_tags.items():
+        driver_scores[tag] += count
+    for tag, count in baseline_tags.items():
+        driver_scores[tag] -= count
+
+    driver_tags = [
+        tag for tag, score in driver_scores.most_common()
+        if score > 0
+    ][:5]
+    if not driver_tags:
+        driver_tags = current_result.top_risk_tags[:5]
+
+    if direction == "up":
+        comment = (
+            f"Risk moved up by {score_change} points, "
+            f"driven mainly by {', '.join(driver_tags[:3])}."
+        )
+    elif direction == "down":
+        comment = (
+            f"Risk moved down by {abs(score_change)} points, "
+            f"partly offset by {', '.join(driver_tags[:3])}."
+        )
+    else:
+        comment = (
+            "Overall risk is broadly flat between periods with similar dominant tags."
+        )
+
+    delta = TrendDelta(
+        score_change=score_change,
+        direction=direction,
+        comment=comment,
+    )
+
+    return RiskSignalTrendResponse(
+        baseline=baseline_summary,
+        current=current_summary,
+        delta=delta,
+        driver_tags=driver_tags,
+        methodology_note=(
+            "Trend is computed by running the existing heuristic on both periods "
+            "and comparing scores."
+        ),
+    )
+

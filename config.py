@@ -72,3 +72,29 @@ CATEGORY_WEIGHTS: Dict[str, float] = {
 # Scoring configuration
 MAX_PER_ITEM_RISK: int = 20  # max contribution of a single news item
 MAX_EFFECTIVE_ITEMS: int = 10  # how many "strong" items correspond to score 100
+
+# === Granular risk tags rules (NEW) ===
+
+GRANULAR_RISK_TAG_RULES: list[dict] = [
+    # sanctions
+    {"tag": "sanctions_risk_russia", "category": "sanctions", "region": "RU"},
+    {"tag": "sanctions_risk_russia", "category": "sanctions", "region": "EU"},
+    {"tag": "sanctions_risk_iran", "category": "sanctions", "region": "IR"},
+    {"tag": "sanctions_risk_iran", "category": "sanctions", "region": "US"},
+
+    # regulation
+    {"tag": "regulatory_risk_eu", "category": "regulation", "region": "EU"},
+    {"tag": "regulatory_risk_us", "category": "regulation", "region": "US"},
+
+    # banking
+    {"tag": "banking_stress_us", "category": "banking", "region": "US"},
+    {"tag": "banking_stress_eu", "category": "banking", "region": "EU"},
+
+    # energy
+    {"tag": "energy_supply_risk_eu", "category": "energy", "region": "EU"},
+    {"tag": "energy_price_risk_global", "category": "energy", "region": None},
+
+    # defense / geopolitics / trade
+    {"tag": "defense_spending_risk", "category": "defense", "region": None},
+    {"tag": "trade_disruption_risk_china", "category": "trade", "region": "CN"},
+]
