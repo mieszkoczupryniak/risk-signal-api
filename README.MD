@@ -39,3 +39,19 @@ Use it when you want to know:
 - Pydantic
 - Uvicorn
 
+## Run with Docker
+
+Build and run the container:
+
+```bash
+docker build -t risk-signal-api .
+docker run -p 8000:8000 risk-signal-api
+
+Or using docker compose:
+
+docker compose up --build
+Then open:
+
+http://127.0.0.1:8000/health
+
+http://127.0.0.1:8000/docs
