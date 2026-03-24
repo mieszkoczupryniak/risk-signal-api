@@ -47,6 +47,111 @@ Compute a risk signal for a single batch of news.
 }
 ```
 
+## RiskSignal Terminal (Streamlit)
+
+RiskSignal Terminal is a simple analyst-facing UI on top of the RiskSignal API.  
+It is designed for macro, EM and sector risk teams who want to quickly scan news headlines, see a risk score, and track how risk moves between periods without touching Python code.
+
+---
+
+### Tabs Overview
+
+**Snapshot**
+
+- Paste a batch of headlines (one per line) and optionally set `region` and `topic_hint`.
+- The app calls `POST /risk-signal` and displays:
+  - Overall risk score (0–100) and risk level (low / medium / high).
+  - Top granular risk tags (e.g. `regulatory_risk_eu`, `sanctions_risk_russia`, `banking_stress_eu`).
+  - Per-headline breakdown with sentiment, categories and risk contribution.
+  - A short textual summary and methodology note.
+
+**Trend**
+
+- Paste baseline and current period headlines to compare two time windows (e.g. previous vs current week).
+- The app calls `POST /risk-signal/trend` and shows:
+  - Baseline vs current scores and levels.
+  - Delta: score change, direction (up / down / flat) and a human-readable comment.
+  - Driver tags – granular tags that explain what moved the signal between periods.
+
+**History**
+
+- Every Snapshot and Trend run is logged to a local SQLite database.
+- The History tab shows:
+  - Recent runs with timestamp, context label, run type (snapshot / trend), score and level.
+  - Top tags for each run.
+  - Full request/response JSON on click for quick debugging or export.
+
+---
+
+### How to Run the Terminal Locally
+
+**1. Start the FastAPI backend** (in one terminal):
+```bash
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+**2. In a separate terminal, create and activate a virtual environment** (if not already done):
+```bash
+python -m venv .venv
+
+# Windows (PowerShell):
+.\.venv\Scripts\Activate.ps1
+
+# Windows (Command Prompt):
+.\.venv\Scripts\activate.bat
+
+# macOS / Linux:
+source .venv/bin/activate
+```
+
+**3. Install frontend dependencies:**
+```bash
+pip install -r requirements.txt
+```
+
+Ensure `streamlit` and `requests` are included in `requirements.txt`.
+
+**4. Run the Streamlit app:**
+```bash
+streamlit run frontend_app.py
+```
+
+**5. Open the browser:**
+
+- Terminal UI: http://localhost:8501
+- Backend docs: http://localhost:8000/docs
+- Backend health: http://localhost:8000/health
+
+By default, the frontend talks to the backend at `http://localhost:8000`. You can override this by setting `RISKSIGNAL_API_URL` in your environment.
+
+---
+
+### Sample Scenarios
+
+**Scenario 1 – `europe_energy`**
+
+- **Baseline:** headlines about early discussions of EU sanctions on Russian oil and mixed signals from banks.
+- **Current:** headlines about a fully approved sanctions package and early signs of banking stress from energy exposure.
+- **What you see:**
+  - Snapshot: medium risk score with tags like `energy_supply_risk_eu`, `energy_price_risk_global`, `banking_stress_eu`.
+  - Trend: risk moving up between weeks, with a comment highlighting sanctions and banking stress as main drivers.
+
+**Scenario 2 – `banking_stress`**
+
+- **Baseline:** "Banks remain stable despite energy market volatility."
+- **Current:** "European banks face stress over energy exposure", "Regulators warn about rising banking stress."
+- **What you see:**
+  - Snapshot: low-to-medium score focused on `banking_stress_eu` and `regulatory_risk_eu`.
+  - Trend: clear "up" move in the score, driven by banking stress and regulatory risk tags.
+
+---
+
+### How Analysts Can Use This Day-to-Day
+
+- Drop in the latest headlines from your news terminal (Reuters, FT, Bloomberg) to get a fast, explainable risk signal before meetings or risk committees.
+- Use the **Trend** tab to compare "last week vs this week" for specific themes (e.g. Russia sanctions, EU energy, US regional banks) and quickly understand what moved.
+- Use the **History** tab as a lightweight log of past runs, tagged by focus label (e.g. `europe_energy_week_12_2026`), so you can revisit how the signal behaved around key events without rebuilding queries from scratch.
+
 **Response body (example)**
 ```json
 {
