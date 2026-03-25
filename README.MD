@@ -124,6 +124,53 @@ streamlit run frontend_app.py
 
 By default, the frontend talks to the backend at `http://localhost:8000`. You can override this by setting `RISKSIGNAL_API_URL` in your environment.
 
+## RiskSignal Terminal (Streamlit)
+
+RiskSignal Terminal is a lightweight Streamlit interface on top of the RiskSignal API. It is designed for macro analysts, portfolio managers, and risk teams who need a fast view of regime shifts in macro, market and geopolitical risk for specific themes.
+
+### Screenshots
+
+- **Terminal – Dashboard**
+
+  ![RiskSignal Terminal – Dashboard](assets/screenshot_terminal_dashboard.png.png)
+
+- **Terminal – Snapshot (European energy & banking stress)**
+
+  ![RiskSignal Terminal – Snapshot](assets/screenshot_terminal_snapshot.png.png)
+
+- **Terminal – Trend (European energy & banking stress)**
+
+  ![RiskSignal Terminal – Trend](assets/screenshot_terminal_trend.png.png)
+
+- **Terminal – History**
+
+  ![RiskSignal Terminal – History](assets/screenshot_terminal_history.png.png)
+
+### How to run locally
+
+1. Start the FastAPI backend:
+
+   ```bash
+   uvicorn main:app --reload
+   # API available at http://localhost:8000
+   ```
+
+2. Set the API URL for the Terminal (for example via environment variable):
+
+   ```bash
+   set RISKSIGNAL_API_URL=http://localhost:8000  # Windows (PowerShell/CMD)
+   # or
+   export RISKSIGNAL_API_URL=http://localhost:8000  # macOS / Linux
+   ```
+
+3. Start the Streamlit Terminal:
+
+   ```bash
+   python -m streamlit run frontend_app.py
+   ```
+
+4. Open the URL printed by Streamlit (usually `http://localhost:8501`) in your browser. The Terminal will talk to the local RiskSignal API via `RISKSIGNAL_API_URL`.
+
 ---
 
 ### Sample Scenarios
