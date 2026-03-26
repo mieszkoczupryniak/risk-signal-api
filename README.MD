@@ -191,7 +191,9 @@ RiskSignal Terminal is a lightweight Streamlit interface on top of the RiskSigna
   - Snapshot: low-to-medium score focused on `banking_stress_eu` and `regulatory_risk_eu`.
   - Trend: clear "up" move in the score, driven by banking stress and regulatory risk tags.
 
----
+## Case Study
+
+See `CASE_STUDY.md` for a simple example on **European energy & banking stress** using the Trend view in the RiskSignal Terminal.
 
 ### How Analysts Can Use This Day-to-Day
 
